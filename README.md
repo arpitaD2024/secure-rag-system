@@ -8,27 +8,24 @@ Secure-RAG-Agent enhances a standard RAG system with security mechanisms that op
 
 The system applies a hybrid approach combining semantic similarity models and classical machine learning to assign risk scores to both queries and retrieved chunks.
 
+---
+
 ## Architecture
 
 ```
-User Query → Input Cleaning (regex-based sanitization) → Sensitive Pattern Filtering → ML-based Attack Detection (SBERT + classifier) → FAISS Retrieval (top-k document chunks) → Query–Chunk Risk Scoring → Block or Pass based on threshold → LLM Generation (GPT-2 or Groq LLaMA 3.3) → Output Verification Layer
+query
+  → clean_query()              # regex strip of known injection phrases
+  → is_sensitive_query()       # hard keyword block
+  → retrieve()                 # FAISS top-k, session-isolated per user
+  → evaluate_chunks()          # ML score: 0.7 × query + 0.3 × chunk_signal
+      score > 0.72 → BLOCKED
+  → generate()                 # GPT-2 (local) | Groq Llama 3.3 70B (prod)
+  → verify()                   # output scan for credential leaks / shell commands
 ```
 
-## Attack Detection
+Attack classifier labels: `direct_injection` · `indirect_injection` · `jailbreak` · `suspicious` · `benign`
 
-The system identifies the following categories:
-
-- Direct prompt injection
-- Indirect or document-based injection
-- Jailbreak attempts
-- Suspicious instruction patterns
-- Malicious or poisoned retrieval content
-
-Attack classification is based on:
-- SBERT embeddings
-- Logistic Regression classifier
-- Rule-based labeling on top of risk score
-
+---
 ## Stack
 
 - FAISS for vector search and retrieval
