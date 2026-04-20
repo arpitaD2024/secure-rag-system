@@ -1,67 +1,91 @@
-# Secure-RAG System
+# secure-rag-agent
 
-Secure Retrieval-Augmented Generation (RAG) framework with built-in LLM attack detection and evaluation. Protects against prompt injections, jailbreaks, and adversarial inputs using a trained ML detector. Includes automation for RAG building, web interface, and comprehensive metrics.
+Retrieval-Augmented Generation pipeline with multi-layer prompt injection defense. Uses a trained ML detector (SBERT + Logistic Regression) to score and block adversarial queries and document-embedded attacks at retrieval time — before they reach the LLM.
 
-## ✨ Features
+---
 
-- **Secure RAG Pipeline**: Vector store (Faiss), chunking, retrieval with safety checks.
-- **Attack Detector**: ML model (`detector.pkl`) to classify risky queries.
-- **Evaluation Suite**: Precision, ROC, confusion matrix, attack performance plots.
-- **Automation Engine**: End-to-end RAG build and testing (`automation_engine.py`).
-- **Web App**: Flask-based UI (`app.py`, `templates/index.html`).
-- **Data Privacy**: Sensitive data/models excluded (.gitignore).
+## Architecture
 
-## 🚀 Quick Start
+```
+query
+  → clean_query()              # regex strip of known injection phrases
+  → is_sensitive_query()       # hard keyword block
+  → retrieve()                 # FAISS top-k, session-isolated per user
+  → evaluate_chunks()          # ML score: 0.7 × query + 0.3 × chunk_signal
+      score > 0.72 → BLOCKED
+  → generate()                 # GPT-2 (local) | Groq Llama 3.3 70B (prod)
+  → verify()                   # output scan for credential leaks / shell commands
+```
 
-1. Clone the repo:
-   ```
-   git clone git@github.com:arpitaD2024/secure-rag-system.git
-   cd secure-rag-system
-   ```
+Attack classifier labels: `direct_injection` · `indirect_injection` · `jailbreak` · `suspicious` · `benign`
 
-2. Setup virtual env & deps:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or venv\Scripts\activate  # Windows
-   pip install -r requirements.txt
-   ```
+---
 
-3. Run the app:
-   ```
-   python app.py
-   ```
-   Open `http://localhost:5000`.
+## Stack
 
-## 🛠 Local Development (Full Setup)
+- **Vector store** — FAISS (`faiss-cpu`)
+- **Embeddings** — `all-MiniLM-L6-v2` (SentenceTransformers)
+- **Detector** — SBERT + Logistic Regression (`models/detector.pkl`)
+- **Generator (local)** — GPT-2 via HuggingFace `transformers`
+- **Generator (prod)** — Groq API / `llama-3.3-70b-versatile`
+- **Web interface** — Flask
 
-1. Train detector (if needed):
-   ```
-   python train_detector.py
-   ```
+---
 
-2. Build RAG index:
-   ```
-   python build_rag.py
-   ```
+## Setup
 
-3. Run evaluation:
-   ```
-   python evaluation.py
-   ```
+```bash
+git clone git@github.com:arpitaD2024/secure-rag-agent.git
+cd secure-rag-agent
 
-4. Secure RAG:
-   ```
-   python secure_rag.py
-   ```
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-## 📊 Evaluation
+Build index and train detector before first run:
 
-Generated plots:
-- `roc_curve.png`
-- `precision_recall_curve.png`
-- `confusion_matrix.png`
-- `attack_type_performance.png`
+```bash
+python build_rag.py
+python train_detector.py
+```
 
-Uses train/validation/test CSVs for detector training/eval.
+---
 
+## Usage
+
+```bash
+# Web interface
+python app.py
+# → http://localhost:5000
+
+# Evaluation metrics
+python evaluation.py
+```
+
+```python
+from secure_rag import SecureRAGAgent
+
+agent = SecureRAGAgent(mode="local")   # GPT-2
+agent = SecureRAGAgent(mode="groq")    # Llama 3.3 70B
+
+result = agent.run("What is the refund policy?", session_id="user_123")
+# → { answer, attack_detected, attack_type, score }
+```
+
+---
+
+## Environment
+
+```bash
+GROQ_API_KEY=your_key   # required for mode="groq" only
+```
+
+---
+
+
+## Notes
+
+- `data/` and `models/` are gitignored — generate locally via `build_rag.py` and `train_detector.py`
+- Session indexes are in-memory and reset on server restart
+- The ML detector outputs a risk score only — attack type labels are rule-based on top of the score
