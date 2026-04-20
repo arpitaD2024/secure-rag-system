@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure RAG System</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: #e8e8e2;
+            color: #1f2d3d;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        h2 {
+            font-size: 22px;
+            margin-bottom: 24px;
+            font-weight: 600;
+            color: #1f2d3d;
+        }
+
+        .box {
+            background: #ffffff;
+            border: 1px solid #ddddd6;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .box h3 {
+            margin: 0 0 12px 0;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: #8a8a82;
+            font-weight: 600;
+        }
+
+        .file-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 1px solid #d8d5cf;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #8a8a82;
+            background: #f7f6f2;
+            width: 100%;
+        }
+
+        input[type="file"] { display: none; }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #d8d5cf;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            background: #fff;
+            color: #1f2d3d;
+            font-family: "Segoe UI", Arial, sans-serif;
+            transition: 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #aaa89e;
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.06);
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 9px 20px;
+            background: #ffffff;
+            color: #1f2d3d;
+            border: 1px solid #ccccc4;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: "Segoe UI", Arial, sans-serif;
+            transition: 0.2s;
+        }
+
+        button:hover { background: #f2f1ec; }
+
+        .value {
+            font-size: 14px;
+            margin: 0;
+            line-height: 1.5;
+            color: #1f2d3d;
+        }
+
+        .safe {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            background: #e6f4ec;
+            color: #2a7a45;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .attack {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            background: #fdecea;
+            color: #c0392b;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #f1efea;
+            color: #5a5a52;
+            border: 1px solid #dddbd5;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .grid .box { margin-bottom: 0; }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h2>Secure RAG System</h2>
+
+    <div class="box">
+        <h3>Upload Document</h3>
+        <label class="file-label" for="file">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span id="file-name">Choose .docx file…</span>
+        </label>
+        <input type="file" id="file" accept=".docx" onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'Choose .docx file…'">
+    </div>
+
+    <div class="box">
+        <h3>Ask Question</h3>
+        <input type="text" id="query" placeholder="Enter your question...">
+        <button onclick="ask()">Submit</button>
+    </div>
+
+    <div class="box">
+        <h3>Answer</h3>
+        <p class="value" id="answer">—</p>
+    </div>
+
+    <div class="grid">
+        <div class="box">
+            <h3>Attack Detection</h3>
+            <p class="value" id="attack">—</p>
+        </div>
+        <div class="box">
+            <h3>Attack Type</h3>
+            <p class="value" id="attack-type">—</p>
+        </div>
+        <div class="box">
+            <h3>Attack Score</h3>
+            <p class="value" id="score">—</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+async function ask() {
+    let query = document.getElementById("query").value;
+    let fileInput = document.getElementById("file");
+    let formData = new FormData();
+    formData.append("query", query);
+    if (fileInput.files.length > 0) formData.append("file", fileInput.files[0]);
+
+    let res = await fetch("/ask", { method: "POST", body: formData });
+    let data = await res.json();
+
+    document.getElementById("answer").innerText = data.answer;
+
+    document.getElementById("attack").innerHTML =
+        data.attack_detected
+        ? "<span class='attack'>ATTACK DETECTED</span>"
+        : "<span class='safe'>SAFE</span>";
+
+    document.getElementById("attack-type").innerHTML =
+        data.attack_type ? "<span class='tag'>" + data.attack_type + "</span>" : "N/A";
+
+    document.getElementById("score").innerText =
+        data.score !== undefined ? data.score.toFixed(4) : "—";
+}
+</script>
+</body>
+</html>

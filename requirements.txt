@@ -1,0 +1,14 @@
+faiss-cpu
+numpy
+scikit-learn
+sentence-transformers
+transformers
+torch
+flask
+matplotlib
+pandas
+tqdm
+python-dotenv
+docx
+datasets
+seaborn
