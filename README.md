@@ -65,17 +65,3 @@ Generated plots:
 
 Uses train/validation/test CSVs for detector training/eval.
 
-## 🤝 Contributing
-
-1. Fork & PR.
-2. Add features/tests.
-
-## 📄 License
-
-MIT License – see [LICENSE](LICENSE) (add one!).
-
-## 🙏 Acknowledgments
-
-Built with LangChain, Faiss, Scikit-learn, Flask.
-
-
