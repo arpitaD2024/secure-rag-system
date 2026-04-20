@@ -78,34 +78,6 @@ Metrics:
 - Retrieval contamination rate
 - End-to-end safety score
 
-## Python Usage
-
-```python
-from secure_rag import SecureRAGAgent
-
-agent = SecureRAGAgent(mode="local")  # GPT-2
-# or
-agent = SecureRAGAgent(mode="groq")   # LLaMA 3.3 70B
-
-result = agent.run(
-    "What is the refund policy?",
-    session_id="user_123"
-)
-
-print(result)
-```
-
-Output Format
-
-```json
-{
-  "answer": "...",
-  "attack_detected": false,
-  "attack_type": "benign",
-  "score": 0.14
-}
-```
-
 ## Security Design
 
 - Input sanitization before retrieval
